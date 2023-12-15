@@ -1,26 +1,43 @@
-import { CameraControls, Environment, Float, MeshReflectorMaterial, MeshRefractionMaterial, OrbitControls, RenderTexture, Text } from "@react-three/drei"
+import { CameraControls, Environment, Float, MeshReflectorMaterial, MeshRefractionMaterial, OrbitControls, RenderTexture, Text, useFont } from "@react-three/drei"
 import { Camping } from "./Camping.jsx"
 import { degToRad } from "three/src/math/MathUtils"
 import { useEffect, useRef } from "react"
+import { Color } from "three"
 
-OrbitControls
+const bloomColor = new Color('#fff')
+bloomColor.multiplyScalar(1.5)
 
  const Experience = () => {
     const controls = useRef()
+    const meshFitCameraHome = useRef()
 
     const intro = async () => {
         controls.current.dolly(-22)
         controls.current.smoothTime = 1.6
         controls.current.dolly(22, true)
+        fitCamera()
+    }
+
+    const fitCamera = () => {
+        controls.current.fitToBox(meshFitCameraHome.current, true)
     }
 
     useEffect(() => {
         intro()
-    },[])
+    }, [])
+
+    useEffect(() => {
+        window.addEventListener("resize", fitCamera)
+        return () => window.addEventListener("resize", fitCamera)
+    }, [])
 
   return (
     <>
         <CameraControls ref={controls} />
+        <mesh ref={meshFitCameraHome} position-z={1.5} visible={false}>
+            <boxGeometry args={[7.5, 2, 2]}/>
+            <meshBasicMaterial color="orange" transparent opacity={0.5}/>
+        </mesh>
         <Text
             font={"fonts/Poppins-Black.ttf"}
             position-x={-1.3}
@@ -32,7 +49,7 @@ OrbitControls
             anchorY={'bottom'}
             >            
             MY LITTLE{"\n"}CAMPING
-            <meshBasicMaterial color="white">
+            <meshBasicMaterial color={bloomColor} toneMapped={false}>
                 <RenderTexture attach={"map"}>
                     <color attach="background" args={["#fff"]}/>
                     <Environment preset="sunset" />
@@ -71,5 +88,7 @@ OrbitControls
     </>
   )
 }
+
+useFont.preload('fonts/Poppins-Black.ttf')
 
 export default Experience
