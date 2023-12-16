@@ -1,8 +1,11 @@
 import { CameraControls, Environment, Float, MeshReflectorMaterial, MeshRefractionMaterial, OrbitControls, RenderTexture, Text, useFont } from "@react-three/drei"
 import { Camping } from "./Camping.jsx"
-import { degToRad } from "three/src/math/MathUtils"
+import { degToRad, lerp } from "three/src/math/MathUtils"
 import { useEffect, useRef } from "react"
 import { Color } from "three"
+import { useAtom } from "jotai"
+import { currentPageAtom } from "./UI.jsx"
+import { useFrame } from "@react-three/fiber"
 
 const bloomColor = new Color('#fff')
 bloomColor.multiplyScalar(1.5)
@@ -10,16 +13,37 @@ bloomColor.multiplyScalar(1.5)
  const Experience = () => {
     const controls = useRef()
     const meshFitCameraHome = useRef()
+    const meshFitCameraStore = useRef()
+    const textMaterial = useRef()
+    const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
+
+    useFrame((_, delta) => {
+        textMaterial.current.opacity = lerp(
+          textMaterial.current.opacity,
+          currentPage === "home" || currentPage === "intro" ? 1 : 0,
+          delta * 1.5
+        );
+    });
+    
 
     const intro = async () => {
         controls.current.dolly(-22)
         controls.current.smoothTime = 1.6
-        controls.current.dolly(22, true)
+        // controls.current.dolly(22, true)
+        setTimeout(() => {
+            setCurrentPage("home")
+        }, 1200)
         fitCamera()
     }
 
     const fitCamera = () => {
-        controls.current.fitToBox(meshFitCameraHome.current, true)
+        if (currentPage == "store") {
+            controls.current.smoothTime = 0.8
+            controls.current.fitToBox(meshFitCameraStore.current, true)
+        } else {
+            controls.current.smoothTime = 1.6
+            controls.current.fitToBox(meshFitCameraHome.current, true)
+        }
     }
 
     useEffect(() => {
@@ -27,9 +51,10 @@ bloomColor.multiplyScalar(1.5)
     }, [])
 
     useEffect(() => {
+        fitCamera()
         window.addEventListener("resize", fitCamera)
         return () => window.addEventListener("resize", fitCamera)
-    }, [])
+    }, [currentPage])
 
   return (
     <>
@@ -49,7 +74,7 @@ bloomColor.multiplyScalar(1.5)
             anchorY={'bottom'}
             >            
             MY LITTLE{"\n"}CAMPING
-            <meshBasicMaterial color={bloomColor} toneMapped={false}>
+            <meshBasicMaterial color={bloomColor} toneMapped={false} ref={textMaterial}>
                 <RenderTexture attach={"map"}>
                     <color attach="background" args={["#fff"]}/>
                     <Environment preset="sunset" />
@@ -66,6 +91,10 @@ bloomColor.multiplyScalar(1.5)
         </Text>
         <group rotation-y={degToRad(-25)} position-x={3}>
             <Camping scale={0.6}/>
+            <mesh ref={meshFitCameraStore} visible={false}>
+                <boxGeometry args={[2, 1, 2]} />
+                <meshBasicMaterial color="red" transparent opacity={0.5}/>
+            </mesh>
         </group>
         <mesh position-y={-0.48} rotation-x={-Math.PI / 2}>
             <planeGeometry args={[100, 100]}/>
